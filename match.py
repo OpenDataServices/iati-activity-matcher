@@ -45,23 +45,25 @@ for cgiar_iati_identifier, cgiar_title in cgiar_titles.items():
     ratio, bmgf_iati_identifier, bmgf_title = top_match
 
     if ratio >= 90:
-        print(cgiar_iati_identifier)
         participating_org = cgiar_activity_lookup[cgiar_iati_identifier].find("participating-org[@ref='DAC-1601']")
         participating_org.attrib["activity-id"] = bmgf_iati_identifier
 
-    transactions = cgiar_activity_lookup[cgiar_iati_identifier].findall("transaction")
-    transactions = [transaction for transaction in transactions if transaction.xpath("transaction-type/@code")[0] != "2"]
+    cgiar_transactions = cgiar_activity_lookup[cgiar_iati_identifier].findall("transaction")
+    cgiar_transactions = [transaction for transaction in cgiar_transactions if transaction.xpath("transaction-type/@code")[0] != "2"]
     # Assume everything's USD
-    cgiar_values = [value.text for value in [transaction.find("value") for transaction in transactions]]
+    cgiar_values = [value.text for value in [transaction.find("value") for transaction in cgiar_transactions]]
 
     assert len(cgiar_values) == 1
 
-    transactions = bmgf_activity_lookup[bmgf_iati_identifier].findall("transaction")
-    bmgf_values = [value.text for value in [transaction.find("value") for transaction in transactions]]
-    bmgf_value_to_transaction = {transaction.find("value").text:transaction for transaction in transactions}
+    bmgf_transactions = bmgf_activity_lookup[bmgf_iati_identifier].findall("transaction")
+    bmgf_values = [value.text for value in [transaction.find("value") for transaction in bmgf_transactions]]
 
     transaction_match = cgiar_values[0] in bmgf_values
 
     csvwriter.writerow([ratio, cgiar_iati_identifier, bmgf_iati_identifier, cgiar_title, bmgf_title, transaction_match])
+
+    if ratio >= 90 and transaction_match:
+        print(cgiar_iati_identifier)
+        cgiar_transactions[0].find("provider-org").attrib["provider-activity-id"] = bmgf_iati_identifier
 
 cgiar_tree.write("out/cgiar-activities-matched.xml")

@@ -1,14 +1,14 @@
 import csv
 import glob
-import sys
+import os
 
 from fuzzywuzzy import fuzz
 from lxml import etree
 
 # Load CGIAR activities
-tree = etree.parse("xml_in/cgiar-activities.xml")
+cgiar_tree = etree.parse("xml_in/cgiar-activities.xml")
 # Use only those with BMGF as a participating org
-cgiar_activities = tree.xpath("/iati-activities/iati-activity[participating-org[@ref='DAC-1601']]")
+cgiar_activities = cgiar_tree.xpath("/iati-activities/iati-activity[participating-org[@ref='DAC-1601']]")
 
 # Load BMGF activities
 bmgf_activities = []
@@ -31,7 +31,8 @@ def titles(activities):
 cgiar_titles = titles(cgiar_activities)
 bmgf_titles = titles(bmgf_activities)
 
-csvwriter = csv.writer(sys.stdout)
+os.makedirs("out", exist_ok=True)
+csvwriter = csv.writer(open("out/matches.csv", "w"))
 
 for cgiar_iati_identifier, cgiar_title in cgiar_titles.items():
     ratios = []
@@ -41,6 +42,13 @@ for cgiar_iati_identifier, cgiar_title in cgiar_titles.items():
     ratios.sort(reverse=True)
     top_match = ratios[0]
 
+    ratio, bmgf_iati_identifier, bmgf_title = top_match
+
+    if ratio >= 90:
+        print(cgiar_iati_identifier)
+        participating_org = cgiar_activity_lookup[cgiar_iati_identifier].find("participating-org[@ref='DAC-1601']")
+        participating_org.attrib["activity-id"] = bmgf_iati_identifier
+
     transactions = cgiar_activity_lookup[cgiar_iati_identifier].findall("transaction")
     transactions = [transaction for transaction in transactions if transaction.xpath("transaction-type/@code")[0] != "2"]
     # Assume everything's USD
@@ -48,11 +56,12 @@ for cgiar_iati_identifier, cgiar_title in cgiar_titles.items():
 
     assert len(cgiar_values) == 1
 
-    bmgf_iati_identifier = top_match[1]
-    bmgf_title = top_match[2]
     transactions = bmgf_activity_lookup[bmgf_iati_identifier].findall("transaction")
     bmgf_values = [value.text for value in [transaction.find("value") for transaction in transactions]]
+    bmgf_value_to_transaction = {transaction.find("value").text:transaction for transaction in transactions}
 
     transaction_match = cgiar_values[0] in bmgf_values
 
-    csvwriter.writerow([top_match[0], cgiar_iati_identifier, top_match[1], cgiar_title, top_match[2], transaction_match])
+    csvwriter.writerow([ratio, cgiar_iati_identifier, bmgf_iati_identifier, cgiar_title, bmgf_title, transaction_match])
+
+cgiar_tree.write("out/cgiar-activities-matched.xml")

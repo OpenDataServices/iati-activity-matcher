@@ -15,6 +15,5 @@ Currently this makes a bunch of assumptions that happen to be true of these spec
 python3 -m venv .ve
 source .ve/bin/activate
 pip install -r requirements.txt
-mkdir out
-python match.py > out/matches.csv
+python match.py
 ```

@@ -125,7 +125,8 @@ def match_command(recipient_org_ref, funder_org_ref):
         funder_org_ref,
         f"/iati-activities/iati-activity[reporting-org/@ref='{funder_org_ref}']",
     )
-    print(len(recipient_activities), len(funder_activities))
+    print(f"{len(recipient_activities)} recipient activities")
+    print(f"{len(funder_activities)} funder activities")
     match(recipient_activities, funder_activities)
 
 

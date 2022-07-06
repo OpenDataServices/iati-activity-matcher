@@ -1,130 +1,95 @@
 import csv
-import glob
 import os
 
 from fuzzywuzzy import fuzz
-from lxml import etree
-
-# Load CGIAR activities
-cgiar_tree = etree.parse("xml_in/cgiar-activities.xml")
-# Use only those with BMGF as a participating org
-cgiar_activities = cgiar_tree.xpath(
-    "/iati-activities/iati-activity[participating-org[@ref='DAC-1601']]"
-)
-
-# Load BMGF activities
-bmgf_activities = []
-# Filter to only these Channel Codes, which are specifically for CGIAR and it's members
-crs_channel_codes = [
-    47015,
-    47017,
-    47018,
-    47020,
-    47021,
-    47051,
-    47056,
-    47057,
-    51001,
-    47062,
-    47063,
-    47069,
-    47070,
-    47075,
-    47101,
-    47104,
-]
-crs_channel_codes_or_statement = " or ".join(
-    f"@crs-channel-code='{code}'" for code in crs_channel_codes
-)
-for bmgf_file in glob.glob("xml_in/bmgf-activity-*.xml"):
-    tree = etree.parse(bmgf_file)
-    bmgf_activities += tree.xpath(
-        f"/iati-activities/iati-activity[participating-org[{crs_channel_codes_or_statement}]]"
-    )
 
 
-def activity_lookup(activities):
-    return {
-        activity.xpath("iati-identifier")[0].text: activity for activity in activities
-    }
+def match(recipient_activities, funder_activities, recipient_tree=None):
+    def activity_lookup(activities):
+        return {
+            activity.xpath("iati-identifier")[0].text: activity
+            for activity in activities
+        }
 
+    recipient_activity_lookup = activity_lookup(recipient_activities)
+    funder_activity_lookup = activity_lookup(funder_activities)
 
-cgiar_activity_lookup = activity_lookup(cgiar_activities)
-bmgf_activity_lookup = activity_lookup(bmgf_activities)
+    def titles(activities):
+        return {
+            activity.xpath("iati-identifier")[0].text: "\n".join(
+                activity.xpath("title/narrative/text()")
+            )
+            for activity in activities
+        }
 
+    recipient_titles = titles(recipient_activities)
+    funder_titles = titles(funder_activities)
 
-def titles(activities):
-    return {
-        activity.xpath("iati-identifier")[0].text: "\n".join(
-            activity.xpath("title/narrative/text()")
-        )
-        for activity in activities
-    }
+    os.makedirs("out", exist_ok=True)
+    csvwriter = csv.writer(open("out/matches.csv", "w"))
 
+    for recipient_iati_identifier, recipient_title in recipient_titles.items():
+        ratios = []
+        for funder_iati_identifier, funder_title in funder_titles.items():
+            ratio = fuzz.token_set_ratio(recipient_title, funder_title)
+            ratios.append((ratio, funder_iati_identifier, funder_title))
+        ratios.sort(reverse=True)
+        top_match = ratios[0]
 
-cgiar_titles = titles(cgiar_activities)
-bmgf_titles = titles(bmgf_activities)
+        ratio, funder_iati_identifier, funder_title = top_match
 
-os.makedirs("out", exist_ok=True)
-csvwriter = csv.writer(open("out/matches.csv", "w"))
+        if ratio >= 90:
+            participating_org = recipient_activity_lookup[
+                recipient_iati_identifier
+            ].find("participating-org[@ref='DAC-1601']")
+            participating_org.attrib["activity-id"] = funder_iati_identifier
 
-for cgiar_iati_identifier, cgiar_title in cgiar_titles.items():
-    ratios = []
-    for bmgf_iati_identifier, bmgf_title in bmgf_titles.items():
-        ratio = fuzz.token_set_ratio(cgiar_title, bmgf_title)
-        ratios.append((ratio, bmgf_iati_identifier, bmgf_title))
-    ratios.sort(reverse=True)
-    top_match = ratios[0]
-
-    ratio, bmgf_iati_identifier, bmgf_title = top_match
-
-    if ratio >= 90:
-        participating_org = cgiar_activity_lookup[cgiar_iati_identifier].find(
-            "participating-org[@ref='DAC-1601']"
-        )
-        participating_org.attrib["activity-id"] = bmgf_iati_identifier
-
-    cgiar_transactions = cgiar_activity_lookup[cgiar_iati_identifier].findall(
-        "transaction"
-    )
-    cgiar_transactions = [
-        transaction
-        for transaction in cgiar_transactions
-        if transaction.xpath("transaction-type/@code")[0] != "2"
-    ]
-    # Assume everything's USD
-    cgiar_values = [
-        value.text
-        for value in [transaction.find("value") for transaction in cgiar_transactions]
-    ]
-
-    assert len(cgiar_values) == 1
-
-    bmgf_transactions = bmgf_activity_lookup[bmgf_iati_identifier].findall(
-        "transaction"
-    )
-    bmgf_values = [
-        value.text
-        for value in [transaction.find("value") for transaction in bmgf_transactions]
-    ]
-
-    transaction_match = cgiar_values[0] in bmgf_values
-
-    csvwriter.writerow(
-        [
-            ratio,
-            cgiar_iati_identifier,
-            bmgf_iati_identifier,
-            cgiar_title,
-            bmgf_title,
-            transaction_match,
+        recipient_transactions = recipient_activity_lookup[
+            recipient_iati_identifier
+        ].findall("transaction")
+        recipient_transactions = [
+            transaction
+            for transaction in recipient_transactions
+            if transaction.xpath("transaction-type/@code")[0] != "2"
         ]
-    )
+        # Assume everything's USD
+        recipient_values = [
+            value.text
+            for value in [
+                transaction.find("value") for transaction in recipient_transactions
+            ]
+        ]
 
-    if ratio >= 90 and transaction_match:
-        print(cgiar_iati_identifier)
-        cgiar_transactions[0].find("provider-org").attrib[
-            "provider-activity-id"
-        ] = bmgf_iati_identifier
+        assert len(recipient_values) == 1
 
-cgiar_tree.write("out/cgiar-activities-matched.xml")
+        funder_transactions = funder_activity_lookup[funder_iati_identifier].findall(
+            "transaction"
+        )
+        funder_values = [
+            value.text
+            for value in [
+                transaction.find("value") for transaction in funder_transactions
+            ]
+        ]
+
+        transaction_match = recipient_values[0] in funder_values
+
+        csvwriter.writerow(
+            [
+                ratio,
+                recipient_iati_identifier,
+                funder_iati_identifier,
+                recipient_title,
+                funder_title,
+                transaction_match,
+            ]
+        )
+
+        if recipient_tree and ratio >= 90 and transaction_match:
+            print(recipient_iati_identifier)
+            recipient_transactions[0].find("provider-org").attrib[
+                "provider-activity-id"
+            ] = funder_iati_identifier
+
+    if recipient_tree:
+        recipient_tree.write("out/recipient-activities-matched.xml")

@@ -6,6 +6,8 @@ import click
 import iatikit
 from fuzzywuzzy import fuzz
 
+MIN_RATIO = 70
+
 
 def activities_by_id(activities):
     return {
@@ -23,7 +25,6 @@ def titles_by_activity_id(activities):
 
 
 def match(recipient_activities, funder_activities, recipient_tree=None):
-
     recipient_activities_by_id = activities_by_id(recipient_activities)
     funder_activities_by_id = activities_by_id(funder_activities)
 
@@ -36,14 +37,14 @@ def match(recipient_activities, funder_activities, recipient_tree=None):
     for recipient_iati_identifier, recipient_title in recipient_titles.items():
         ratios = []
         for funder_iati_identifier, funder_title in funder_titles.items():
-            ratio = fuzz.token_set_ratio(recipient_title, funder_title)
+            ratio = fuzz.token_sort_ratio(recipient_title, funder_title)
             ratios.append((ratio, funder_iati_identifier, funder_title))
         ratios.sort(reverse=True)
         top_match = ratios[0]
 
         ratio, funder_iati_identifier, funder_title = top_match
 
-        if ratio >= 90:
+        if ratio >= MIN_RATIO:
             participating_org = recipient_activities_by_id[
                 recipient_iati_identifier
             ].find("participating-org[@ref='DAC-1601']")
@@ -90,7 +91,7 @@ def match(recipient_activities, funder_activities, recipient_tree=None):
             ]
         )
 
-        if recipient_tree and ratio >= 90 and transaction_match:
+        if recipient_tree and ratio >= MIN_RATIO and transaction_match:
             print(recipient_iati_identifier)
             recipient_transactions[0].find("provider-org").attrib[
                 "provider-activity-id"

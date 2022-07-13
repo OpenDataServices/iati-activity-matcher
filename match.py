@@ -24,7 +24,12 @@ def titles_by_activity_id(activities):
     }
 
 
-def match(recipient_activities, funder_activities, recipient_tree=None):
+def match(
+    recipient_activities,
+    funder_activities,
+    recipient_tree=None,
+    transaction_tolerance=0,
+):
     recipient_activities_by_id = activities_by_id(recipient_activities)
     funder_activities_by_id = activities_by_id(funder_activities)
 
@@ -78,7 +83,16 @@ def match(recipient_activities, funder_activities, recipient_tree=None):
             ]
         ]
 
-        transaction_match = recipient_values[0] in funder_values
+        transaction_match = False
+        for funder_value in funder_values:
+            funder_value = float(funder_value)
+            recipient_value = float(recipient_values[0])
+            if (
+                recipient_value >= funder_value - transaction_tolerance
+                and recipient_value <= funder_value + transaction_tolerance
+            ):
+                transaction_match = True
+                break
 
         csvwriter.writerow(
             [
@@ -104,7 +118,8 @@ def match(recipient_activities, funder_activities, recipient_tree=None):
 @click.command()
 @click.option("--recipient-org-ref", required=True)
 @click.option("--funder-org-ref", required=True)
-def match_command(recipient_org_ref, funder_org_ref):
+@click.option("--transaction_tolerance", required=False, default=0)
+def match_command(recipient_org_ref, funder_org_ref, transaction_tolerance):
     with open("out/dataset_by_reporting_org.json") as fp:
         dataset_by_reporting_org = json.load(fp)
 
@@ -128,7 +143,11 @@ def match_command(recipient_org_ref, funder_org_ref):
     )
     print(f"{len(recipient_activities)} recipient activities")
     print(f"{len(funder_activities)} funder activities")
-    match(recipient_activities, funder_activities)
+    match(
+        recipient_activities,
+        funder_activities,
+        transaction_tolerance=transaction_tolerance,
+    )
 
 
 if __name__ == "__main__":

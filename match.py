@@ -4,7 +4,7 @@ import os
 
 import click
 import iatikit
-from fuzzywuzzy import fuzz
+from thefuzz import fuzz
 
 MIN_RATIO = 70
 

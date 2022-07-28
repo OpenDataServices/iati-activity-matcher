@@ -13,6 +13,7 @@ registry = iatikit.data()
 participating_org_details_by_orgs = defaultdict(lambda: defaultdict(list))
 participating_org_ref_dict_by_reporting_org = defaultdict(list)
 dataset_by_reporting_org = defaultdict(list)
+activity_count_by_reporting_org = defaultdict(int)
 
 for i, activity in enumerate(registry.activities):
     try:
@@ -58,6 +59,7 @@ for i, activity in enumerate(registry.activities):
             participating_org_ref_dict_list.append(participating_org_ref_dict)
     if activity.dataset.name not in dataset_by_reporting_org[reporting_org]:
         dataset_by_reporting_org[reporting_org].append(activity.dataset.name)
+    activity_count_by_reporting_org[reporting_org] += 1
     if i != 0 and i % 100000 == 0:
         with open("out/participating_org_ref_dict_by_reporting_org.json", "w") as fp:
             json.dump(participating_org_ref_dict_by_reporting_org, fp)
@@ -65,6 +67,8 @@ for i, activity in enumerate(registry.activities):
             json.dump(participating_org_details_by_orgs, fp)
         with open("out/dataset_by_reporting_org.json", "w") as fp:
             json.dump(dataset_by_reporting_org, fp)
+        with open("out/activity_count_by_reporting_org.json", "w") as fp:
+            json.dump(activity_count_by_reporting_org, fp)
 
 with open("out/participating_org_ref_dict_by_reporting_org.json", "w") as fp:
     json.dump(participating_org_ref_dict_by_reporting_org, fp)
@@ -72,3 +76,5 @@ with open("out/participating_org_details_by_orgs.json", "w") as fp:
     json.dump(participating_org_details_by_orgs, fp)
 with open("out/dataset_by_reporting_org.json", "w") as fp:
     json.dump(dataset_by_reporting_org, fp)
+with open("out/activity_count_by_reporting_org.json", "w") as fp:
+    json.dump(activity_count_by_reporting_org, fp)

@@ -10,6 +10,9 @@ with open("out/participating_org_details_by_orgs.json") as fp:
 with open("out/dataset_by_reporting_org.json") as fp:
     dataset_by_reporting_org = json.load(fp)
 
+with open("out/activity_count_by_reporting_org.json") as fp:
+    activity_count_by_reporting_org = json.load(fp)
+
 linked_orgs_csv = csv.writer(open("out/linked_orgs.csv", "w"))
 
 for participating_org_ref_dicts in participating_org_ref_dict_by_reporting_org.values():
@@ -39,5 +42,6 @@ for participating_org_ref_dicts in participating_org_ref_dict_by_reporting_org.v
                             ]
                         ]
                     ),
+                    activity_count_by_reporting_org[pord["participating_org_ref"]],
                 ]
             )

@@ -11,17 +11,24 @@ MIN_RATIO = 70
 
 def activities_by_id(activities):
     return {
-        activity.xpath("iati-identifier")[0].text: activity for activity in activities
+        activity.findall("iati-identifier")[0].text: activity
+        for activity in activities
+        if activity.findall("iati-identifier")
     }
 
 
 def titles_by_activity_id(activities):
     return {
-        activity.xpath("iati-identifier")[0].text: "\n".join(
+        activity.findall("iati-identifier")[0].text: "\n".join(
             activity.xpath("title/narrative/text()")
         )
         for activity in activities
+        if activity.findall("iati-identifier")
     }
+
+
+os.makedirs("out", exist_ok=True)
+csvwriter = csv.writer(open("out/matches.csv", "w"))
 
 
 def match(
@@ -30,14 +37,14 @@ def match(
     recipient_tree=None,
     transaction_tolerance=0,
 ):
+    if len(recipient_activities) == 0 or len(funder_activities) == 0:
+        return
+
     recipient_activities_by_id = activities_by_id(recipient_activities)
     funder_activities_by_id = activities_by_id(funder_activities)
 
     recipient_titles = titles_by_activity_id(recipient_activities)
     funder_titles = titles_by_activity_id(funder_activities)
-
-    os.makedirs("out", exist_ok=True)
-    csvwriter = csv.writer(open("out/matches.csv", "w"))
 
     for recipient_iati_identifier, recipient_title in recipient_titles.items():
         ratios = []
@@ -53,7 +60,8 @@ def match(
             participating_org = recipient_activities_by_id[
                 recipient_iati_identifier
             ].find("participating-org[@ref='DAC-1601']")
-            participating_org.attrib["activity-id"] = funder_iati_identifier
+            if participating_org is not None:
+                participating_org.attrib["activity-id"] = funder_iati_identifier
 
         recipient_transactions = recipient_activities_by_id[
             recipient_iati_identifier
@@ -117,37 +125,50 @@ def match(
 
 @click.command()
 @click.option("--recipient-org-ref", required=True)
-@click.option("--funder-org-ref", required=True)
+@click.option("--funder-org-ref", required=False)
 @click.option("--transaction_tolerance", required=False, default=0)
 def match_command(recipient_org_ref, funder_org_ref, transaction_tolerance):
     with open("out/dataset_by_reporting_org.json") as fp:
         dataset_by_reporting_org = json.load(fp)
 
+    if funder_org_ref is None:
+        with open("out/participating_org_ref_dict_by_reporting_org.json") as fp:
+            participating_org_ref_dict_by_reporting_org = json.load(fp)
+            funder_org_refs = [
+                pord["participating_org_ref"]
+                for pord in participating_org_ref_dict_by_reporting_org[
+                    recipient_org_ref
+                ]
+            ]
+    else:
+        funder_org_refs = [funder_org_ref]
+
     registry = iatikit.data()
 
     def get_activities(reporting_org_ref, xpath):
         activities = []
-        dataset_names = dataset_by_reporting_org[reporting_org_ref]
+        dataset_names = dataset_by_reporting_org.get(reporting_org_ref, [])
         for dataset_name in dataset_names:
             dataset = registry.datasets.find(name=dataset_name)
             activities += dataset.etree.xpath(xpath)
         return activities
 
-    recipient_activities = get_activities(
-        recipient_org_ref,
-        f"/iati-activities/iati-activity[reporting-org/@ref='{recipient_org_ref}' and participating-org[@ref='{funder_org_ref}' and @role='1']]",
-    )
-    funder_activities = get_activities(
-        funder_org_ref,
-        f"/iati-activities/iati-activity[reporting-org/@ref='{funder_org_ref}']",
-    )
-    print(f"{len(recipient_activities)} recipient activities")
-    print(f"{len(funder_activities)} funder activities")
-    match(
-        recipient_activities,
-        funder_activities,
-        transaction_tolerance=transaction_tolerance,
-    )
+    for funder_org_ref in funder_org_refs:
+        recipient_activities = get_activities(
+            recipient_org_ref,
+            f"/iati-activities/iati-activity[reporting-org/@ref='{recipient_org_ref}' and participating-org[@ref='{funder_org_ref}' and @role='1']]",
+        )
+        funder_activities = get_activities(
+            funder_org_ref,
+            f"/iati-activities/iati-activity[reporting-org/@ref='{funder_org_ref}']",
+        )
+        print(f"{len(recipient_activities)} recipient activities")
+        print(f"{len(funder_activities)} funder activities")
+        match(
+            recipient_activities,
+            funder_activities,
+            transaction_tolerance=transaction_tolerance,
+        )
 
 
 if __name__ == "__main__":

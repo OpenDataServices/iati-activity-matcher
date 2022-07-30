@@ -9,6 +9,11 @@ from thefuzz import fuzz
 MIN_RATIO = 70
 
 
+def first_or_none(l):
+    if len(l):
+        return l[0]
+
+
 def activities_by_id(activities):
     return {
         activity.findall("iati-identifier")[0].text: activity
@@ -69,38 +74,47 @@ def match(
         recipient_transactions = [
             transaction
             for transaction in recipient_transactions
-            if transaction.xpath("transaction-type/@code")[0] != "2"
+            if first_or_none(transaction.xpath("transaction-type/@code")) == "1"
         ]
-        # Assume everything's USD
-        recipient_values = [
-            value.text
-            for value in [
-                transaction.find("value") for transaction in recipient_transactions
-            ]
-        ]
-
-        assert len(recipient_values) == 1
-
         funder_transactions = funder_activities_by_id[funder_iati_identifier].findall(
             "transaction"
         )
+        funder_transactions = [
+            transaction
+            for transaction in funder_transactions
+            if first_or_none(transaction.xpath("transaction-type/@code")) == "3"
+        ]
+        # Assume everything's USD
         funder_values = [
             value.text
             for value in [
                 transaction.find("value") for transaction in funder_transactions
             ]
+            if value is not None
         ]
 
         transaction_match = False
-        for funder_value in funder_values:
-            funder_value = float(funder_value)
-            recipient_value = float(recipient_values[0])
-            if (
-                recipient_value >= funder_value - transaction_tolerance
-                and recipient_value <= funder_value + transaction_tolerance
-            ):
-                transaction_match = True
-                break
+        for recipient_transaction in recipient_transactions:
+            recipient_value_element = recipient_transaction.find("value")
+            recipient_value = recipient_value_element.text
+            if recipient_value is None:
+                continue
+            for funder_value in funder_values:
+                funder_value = float(funder_value)
+                recipient_value = float(recipient_value)
+                if (
+                    recipient_value >= funder_value - transaction_tolerance
+                    and recipient_value <= funder_value + transaction_tolerance
+                ):
+                    transaction_match = True
+                    if recipient_tree and ratio >= MIN_RATIO and transaction_match:
+                        print(recipient_iati_identifier)
+                        provider_org = recipient_transaction.find("provider-org")
+                        if provider_org:
+                            provider_org.attrib[
+                                "provider-activity-id"
+                            ] = funder_iati_identifier
+                    break
 
         csvwriter.writerow(
             [
@@ -112,12 +126,6 @@ def match(
                 transaction_match,
             ]
         )
-
-        if recipient_tree and ratio >= MIN_RATIO and transaction_match:
-            print(recipient_iati_identifier)
-            recipient_transactions[0].find("provider-org").attrib[
-                "provider-activity-id"
-            ] = funder_iati_identifier
 
     if recipient_tree:
         recipient_tree.write("out/recipient-activities-matched.xml")

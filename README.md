@@ -7,7 +7,7 @@ There's a writeup of the work in this repo at https://docs.google.com/document/d
 ## WARNING: Assumptions
 
 Currently this makes a bunch of assumptions that happen to be true of certain datasets:
-* The recipient only has 1 transaction per activity
+* Only version 2.01 and later data is supported
 * There is no currency conversion. Transactions must be in the same currency to be matched by value.
 
 ## Installation
@@ -54,3 +54,13 @@ python match.py --recipient-org-ref XM-DAC-47015
 The output is in `out/matches.csv`.
 
 For an example of this output, see https://docs.google.com/spreadsheets/d/1kc9SttmUR3xo-JNVvOijBoa8qyPP_eh9ughbwm7N6tw/edit#gid=0
+
+
+### Tests
+
+Run:
+
+```
+pip install -r requirements_dev.txt
+pytest
+```

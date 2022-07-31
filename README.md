@@ -9,6 +9,7 @@ There's a writeup of the work in this repo at https://docs.google.com/document/d
 Currently this makes a bunch of assumptions that happen to be true of certain datasets:
 * Only version 2.01 and later data is supported
 * There is no currency conversion. Transactions must be in the same currency to be matched by value.
+* If there are multiple titles texts, they are concatenated. This means multilingual titles may not match well.
 
 ## Installation
 

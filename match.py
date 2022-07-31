@@ -16,19 +16,19 @@ def first_or_none(l):
 
 def activities_by_id(activities):
     return {
-        activity.findall("iati-identifier")[0].text: activity
+        activity.find("iati-identifier").text: activity
         for activity in activities
-        if activity.findall("iati-identifier")
+        if activity.find("iati-identifier") is not None
     }
 
 
 def titles_by_activity_id(activities):
     return {
-        activity.findall("iati-identifier")[0].text: "\n".join(
+        activity.find("iati-identifier").text: "\n".join(
             activity.xpath("title/narrative/text()")
         )
         for activity in activities
-        if activity.findall("iati-identifier")
+        if activity.find("iati-identifier") is not None
     }
 
 
@@ -39,8 +39,9 @@ csvwriter = csv.writer(open("out/matches.csv", "w"))
 def match(
     recipient_activities,
     funder_activities,
-    recipient_tree=None,
     transaction_tolerance=0,
+    update_xml=False,
+    funder_org_ref=None,
 ):
     if len(recipient_activities) == 0 or len(funder_activities) == 0:
         return
@@ -52,8 +53,12 @@ def match(
     funder_titles = titles_by_activity_id(funder_activities)
 
     for recipient_iati_identifier, recipient_title in recipient_titles.items():
+        if not recipient_title.strip(" \n"):
+            continue
         ratios = []
         for funder_iati_identifier, funder_title in funder_titles.items():
+            if not funder_title.strip(" \n"):
+                continue
             ratio = fuzz.token_sort_ratio(recipient_title, funder_title)
             ratios.append((ratio, funder_iati_identifier, funder_title))
         ratios.sort(reverse=True)
@@ -61,10 +66,10 @@ def match(
 
         ratio, funder_iati_identifier, funder_title = top_match
 
-        if ratio >= MIN_RATIO:
+        if update_xml and ratio >= MIN_RATIO:
             participating_org = recipient_activities_by_id[
                 recipient_iati_identifier
-            ].find("participating-org[@ref='DAC-1601']")
+            ].find(f"participating-org[@ref='{funder_org_ref}']")
             if participating_org is not None:
                 participating_org.attrib["activity-id"] = funder_iati_identifier
 
@@ -107,7 +112,7 @@ def match(
                     and recipient_value <= funder_value + transaction_tolerance
                 ):
                     transaction_match = True
-                    if recipient_tree and ratio >= MIN_RATIO and transaction_match:
+                    if update_xml and ratio >= MIN_RATIO and transaction_match:
                         print(recipient_iati_identifier)
                         provider_org = recipient_transaction.find("provider-org")
                         if provider_org:
@@ -126,9 +131,6 @@ def match(
                 transaction_match,
             ]
         )
-
-    if recipient_tree:
-        recipient_tree.write("out/recipient-activities-matched.xml")
 
 
 @click.command()
@@ -153,18 +155,22 @@ def match_command(recipient_org_ref, funder_org_ref, transaction_tolerance):
 
     registry = iatikit.data()
 
-    def get_activities(reporting_org_ref, xpath):
+    def get_activities(reporting_org_ref, xpath, datasets=None):
         activities = []
         dataset_names = dataset_by_reporting_org.get(reporting_org_ref, [])
         for dataset_name in dataset_names:
             dataset = registry.datasets.find(name=dataset_name)
             activities += dataset.etree.xpath(xpath)
+            if datasets is not None:
+                datasets.append(dataset)
         return activities
 
     for funder_org_ref in funder_org_refs:
+        recipient_datasets = []
         recipient_activities = get_activities(
             recipient_org_ref,
             f"/iati-activities/iati-activity[reporting-org/@ref='{recipient_org_ref}' and participating-org[@ref='{funder_org_ref}' and @role='1']]",
+            recipient_datasets,
         )
         funder_activities = get_activities(
             funder_org_ref,
@@ -176,7 +182,11 @@ def match_command(recipient_org_ref, funder_org_ref, transaction_tolerance):
             recipient_activities,
             funder_activities,
             transaction_tolerance=transaction_tolerance,
+            update_xml=True,
+            funder_org_ref=funder_org_ref,
         )
+        for dataset in recipient_datasets:
+            dataset.etree.write(f"out/{dataset.name}.xml")
 
 
 if __name__ == "__main__":

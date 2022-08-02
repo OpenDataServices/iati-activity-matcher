@@ -1,4 +1,4 @@
-<iati-activities>
+<iati-activities version="2.03">
     <iati-activity>
         <iati-identifier>XE-EXAMPLE-BB-01</iati-identifier>
         <reporting-org ref="XE-EXAMPLE-BB"/>
@@ -23,5 +23,9 @@
         <title>
             <narrative>An activity with transaction</narrative>
         </title>
+        <transaction>
+            <transaction-type code="3"/>
+            <value>1000</value>
+        </transaction>
     </iati-activity>
 </iati-activities>

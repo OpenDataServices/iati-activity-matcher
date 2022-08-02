@@ -1,4 +1,4 @@
-<iati-activities>
+<iati-activities version="2.03">
     <iati-activity>
         <iati-identifier>XE-EXAMPLE-AA-01</iati-identifier>
         <reporting-org ref="XE-EXAMPLE-AA"/>

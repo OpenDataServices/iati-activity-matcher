@@ -137,7 +137,7 @@ def match(
 @click.command()
 @click.option("--recipient-org-ref", required=True)
 @click.option("--funder-org-ref", required=False)
-@click.option("--transaction_tolerance", required=False, default=0)
+@click.option("--transaction-tolerance", required=False, default=0)
 def match_command(recipient_org_ref, funder_org_ref, transaction_tolerance):
     os.makedirs("out", exist_ok=True)
     csvwriter = csv.writer(open("out/matches.csv", "w"))

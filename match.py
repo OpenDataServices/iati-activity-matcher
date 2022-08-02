@@ -72,55 +72,64 @@ def match(
             if participating_org is not None:
                 participating_org.attrib["activity-id"] = funder_iati_identifier
 
-        recipient_transactions = recipient_activities_by_id[
-            recipient_iati_identifier
-        ].findall("transaction")
-        recipient_transactions = [
-            transaction
-            for transaction in recipient_transactions
-            if first_or_none(transaction.xpath("transaction-type/@code")) == "1"
-        ]
-        funder_transactions = funder_activities_by_id[funder_iati_identifier].findall(
-            "transaction"
-        )
-        funder_transactions = [
-            transaction
-            for transaction in funder_transactions
-            if first_or_none(transaction.xpath("transaction-type/@code")) == "3"
-        ]
-        # Assume everything's USD
-        funder_values = [
-            value.text
-            for value in [
-                transaction.find("value") for transaction in funder_transactions
-            ]
-            if value is not None
-        ]
-
         transaction_match = False
-        for recipient_transaction in recipient_transactions:
-            recipient_value_element = recipient_transaction.find("value")
-            if recipient_value_element is None:
-                continue
-            recipient_value = recipient_value_element.text
-            if recipient_value is None:
-                continue
-            for funder_value in funder_values:
-                funder_value = float(funder_value)
-                recipient_value = float(recipient_value)
-                if (
-                    recipient_value >= funder_value - transaction_tolerance
-                    and recipient_value <= funder_value + transaction_tolerance
-                ):
-                    transaction_match = True
-                    if update_xml and ratio >= MIN_RATIO and transaction_match:
-                        print(recipient_iati_identifier)
-                        provider_org = recipient_transaction.find("provider-org")
-                        if provider_org:
-                            provider_org.attrib[
-                                "provider-activity-id"
-                            ] = funder_iati_identifier
-                    break
+        # We could be matching disbursements, which is code 1 for incoming funds, and 3 for the outgoing funds
+        # Or, matching commitments which are 11 incoming and 2 outgoing
+        # https://iatistandard.org/en/iati-standard/203/codelists/transactiontype/
+        for recipient_transaction_type, funder_transaction_type in [
+            ("1", "3"),
+            ("11", "2"),
+        ]:
+            recipient_transactions = recipient_activities_by_id[
+                recipient_iati_identifier
+            ].findall("transaction")
+            recipient_transactions = [
+                transaction
+                for transaction in recipient_transactions
+                if first_or_none(transaction.xpath("transaction-type/@code"))
+                == recipient_transaction_type
+            ]
+            funder_transactions = funder_activities_by_id[
+                funder_iati_identifier
+            ].findall("transaction")
+            funder_transactions = [
+                transaction
+                for transaction in funder_transactions
+                if first_or_none(transaction.xpath("transaction-type/@code"))
+                == funder_transaction_type
+            ]
+            # Assume everything's USD
+            funder_values = [
+                value.text
+                for value in [
+                    transaction.find("value") for transaction in funder_transactions
+                ]
+                if value is not None
+            ]
+
+            for recipient_transaction in recipient_transactions:
+                recipient_value_element = recipient_transaction.find("value")
+                if recipient_value_element is None:
+                    continue
+                recipient_value = recipient_value_element.text
+                if recipient_value is None:
+                    continue
+                for funder_value in funder_values:
+                    funder_value = float(funder_value)
+                    recipient_value = float(recipient_value)
+                    if (
+                        recipient_value >= funder_value - transaction_tolerance
+                        and recipient_value <= funder_value + transaction_tolerance
+                    ):
+                        transaction_match = True
+                        if update_xml and ratio >= MIN_RATIO:
+                            print(recipient_iati_identifier)
+                            provider_org = recipient_transaction.find("provider-org")
+                            if provider_org:
+                                provider_org.attrib[
+                                    "provider-activity-id"
+                                ] = funder_iati_identifier
+                        break
 
         csvwriter.writerow(
             [

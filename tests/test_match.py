@@ -109,7 +109,7 @@ import match
             "XE-EXAMPLE-BB",
         ),
         (
-            "Match activities with transactions",
+            "Match activities with transactions that are committments (transaction-type 1 and 3)",
             """
                 <iati-activities>
                     <iati-activity>
@@ -152,6 +152,57 @@ import match
                         <participating-org ref="XE-EXAMPLE-BB" activity-id="XE-EXAMPLE-BB-01"/>
                         <transaction>
                             <transaction-type code="1"/>
+                            <value>1000</value>
+                        </transaction>
+                    </iati-activity>
+                </iati-activities>
+            """,
+            "XE-EXAMPLE-BB",
+        ),
+        (
+            "Match activities with transactions that are committments (transaction-type 11 and 2)",
+            """
+                <iati-activities>
+                    <iati-activity>
+                        <iati-identifier>XE-EXAMPLE-AA-01</iati-identifier>
+                        <title>
+                            <narrative>A title</narrative>
+                        </title>
+                        <participating-org ref="XE-EXAMPLE-BB"/>
+                        <transaction>
+                            <transaction-type code="11"/>
+                            <value>1000</value>
+                        </transaction>
+                    </iati-activity>
+                </iati-activities>
+            """,
+            """
+                <iati-activities>
+                    <iati-activity>
+                        <iati-identifier>XE-EXAMPLE-BB-01</iati-identifier>
+                        <title>
+                            <narrative>A title</narrative>
+                        </title>
+                        <transaction>
+                            <transaction-type code="2"/>
+                            <value>1000</value>
+                        </transaction>
+                    </iati-activity>
+                </iati-activities>
+            """,
+            """
+                100,XE-EXAMPLE-AA-01,XE-EXAMPLE-BB-01,A title,A title,True
+            """,
+            """
+                <iati-activities>
+                    <iati-activity>
+                        <iati-identifier>XE-EXAMPLE-AA-01</iati-identifier>
+                        <title>
+                            <narrative>A title</narrative>
+                        </title>
+                        <participating-org ref="XE-EXAMPLE-BB" activity-id="XE-EXAMPLE-BB-01"/>
+                        <transaction>
+                            <transaction-type code="11"/>
                             <value>1000</value>
                         </transaction>
                     </iati-activity>

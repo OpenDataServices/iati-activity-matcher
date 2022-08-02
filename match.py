@@ -32,13 +32,10 @@ def titles_by_activity_id(activities):
     }
 
 
-os.makedirs("out", exist_ok=True)
-csvwriter = csv.writer(open("out/matches.csv", "w"))
-
-
 def match(
     recipient_activities,
     funder_activities,
+    csvwriter,
     transaction_tolerance=0,
     update_xml=False,
     funder_org_ref=None,
@@ -138,6 +135,9 @@ def match(
 @click.option("--funder-org-ref", required=False)
 @click.option("--transaction_tolerance", required=False, default=0)
 def match_command(recipient_org_ref, funder_org_ref, transaction_tolerance):
+    os.makedirs("out", exist_ok=True)
+    csvwriter = csv.writer(open("out/matches.csv", "w"))
+
     with open("out/dataset_by_reporting_org.json") as fp:
         dataset_by_reporting_org = json.load(fp)
 
@@ -181,6 +181,7 @@ def match_command(recipient_org_ref, funder_org_ref, transaction_tolerance):
         match(
             recipient_activities,
             funder_activities,
+            csvwriter,
             transaction_tolerance=transaction_tolerance,
             update_xml=True,
             funder_org_ref=funder_org_ref,

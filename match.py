@@ -58,6 +58,8 @@ def match(
                 continue
             ratio = fuzz.token_sort_ratio(recipient_title, funder_title)
             ratios.append((ratio, funder_iati_identifier, funder_title))
+        if not ratios:
+            continue
         ratios.sort(reverse=True)
         top_match = ratios[0]
 
@@ -98,6 +100,8 @@ def match(
         transaction_match = False
         for recipient_transaction in recipient_transactions:
             recipient_value_element = recipient_transaction.find("value")
+            if recipient_value_element is None:
+                continue
             recipient_value = recipient_value_element.text
             if recipient_value is None:
                 continue

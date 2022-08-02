@@ -179,6 +179,7 @@ def match_command(recipient_org_ref, funder_org_ref, transaction_tolerance):
         return activities
 
     for funder_org_ref in funder_org_refs:
+        print(f"Funder org ref: {funder_org_ref}")
         recipient_datasets = []
         recipient_activities = get_activities(
             recipient_org_ref,
@@ -191,6 +192,7 @@ def match_command(recipient_org_ref, funder_org_ref, transaction_tolerance):
         )
         print(f"{len(recipient_activities)} recipient activities")
         print(f"{len(funder_activities)} funder activities")
+        print()
         match(
             recipient_activities,
             funder_activities,

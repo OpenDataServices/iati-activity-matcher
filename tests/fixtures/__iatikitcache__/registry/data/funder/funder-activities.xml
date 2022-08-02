@@ -1,0 +1,27 @@
+<iati-activities>
+    <iati-activity>
+        <iati-identifier>XE-EXAMPLE-BB-01</iati-identifier>
+        <reporting-org ref="XE-EXAMPLE-BB"/>
+    </iati-activity>
+    <iati-activity>
+        <iati-identifier>XE-EXAMPLE-BB-02</iati-identifier>
+        <reporting-org ref="XE-EXAMPLE-BB"/>
+        <title>
+            <narrative>Some title</narrative>
+        </title>
+    </iati-activity>
+    <iati-activity>
+        <iati-identifier>XE-EXAMPLE-BB-03</iati-identifier>
+        <reporting-org ref="XE-EXAMPLE-BB"/>
+        <title>
+            <narrative>A title</narrative>
+        </title>
+    </iati-activity>
+    <iati-activity>
+        <iati-identifier>XE-EXAMPLE-BB-04</iati-identifier>
+        <reporting-org ref="XE-EXAMPLE-BB"/>
+        <title>
+            <narrative>An activity with transaction</narrative>
+        </title>
+    </iati-activity>
+</iati-activities>

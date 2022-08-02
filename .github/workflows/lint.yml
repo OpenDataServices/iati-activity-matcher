@@ -13,7 +13,6 @@ jobs:
         architecture: x64
         cache: pip
     - run: pip install --upgrade -r requirements_dev.txt
-    - run: mkdir tmp
     - run: black --check *.py */
     - run: isort --check-only *.py */
     - run: flake8

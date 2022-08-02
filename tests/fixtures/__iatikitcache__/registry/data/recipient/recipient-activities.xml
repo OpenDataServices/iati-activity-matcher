@@ -1,0 +1,35 @@
+<iati-activities>
+    <iati-activity>
+        <iati-identifier>XE-EXAMPLE-AA-01</iati-identifier>
+        <reporting-org ref="XE-EXAMPLE-AA"/>
+        <participating-org ref="XE-EXAMPLE-BB" role="1"/>
+    </iati-activity>
+    <iati-activity>
+        <iati-identifier>XE-EXAMPLE-AA-02</iati-identifier>
+        <reporting-org ref="XE-EXAMPLE-AA"/>
+        <title>
+            <narrative>A title</narrative>
+        </title>
+        <participating-org ref="XE-EXAMPLE-BB" role="1"/>
+    </iati-activity>
+    <iati-activity>
+        <iati-identifier>XE-EXAMPLE-AA-03</iati-identifier>
+        <reporting-org ref="XE-EXAMPLE-AA"/>
+        <title>
+            <narrative>Some other title</narrative>
+        </title>
+        <participating-org ref="XE-EXAMPLE-BB" role="1"/>
+    </iati-activity>
+    <iati-activity>
+        <iati-identifier>XE-EXAMPLE-AA-04</iati-identifier>
+        <reporting-org ref="XE-EXAMPLE-AA"/>
+        <title>
+            <narrative>An activity with transaction</narrative>
+        </title>
+        <participating-org ref="XE-EXAMPLE-BB" role="1"/>
+        <transaction>
+            <transaction-type code="1"/>
+            <value>1000</value>
+        </transaction>
+    </iati-activity>
+</iati-activities>

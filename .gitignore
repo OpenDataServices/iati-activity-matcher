@@ -1,4 +1,5 @@
 xml_in
 out
 .ve
-__iatikitcache__
+/__iatikitcache__
+__pycache__

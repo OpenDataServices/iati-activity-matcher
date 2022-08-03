@@ -172,15 +172,20 @@ def match_command(recipient_org_ref, funder_org_ref, transaction_tolerance):
         activities = []
         dataset_names = dataset_by_reporting_org.get(reporting_org_ref, [])
         for dataset_name in dataset_names:
-            dataset = registry.datasets.find(name=dataset_name)
+            if datasets and dataset_name in datasets:
+                dataset = datasets[dataset_name]
+            else:
+                dataset = registry.datasets.find(name=dataset_name)
             activities += dataset.etree.xpath(xpath)
             if datasets is not None:
-                datasets.append(dataset)
+                if dataset not in datasets:
+                    datasets[dataset_name] = dataset
         return activities
+
+    recipient_datasets = {}
 
     for funder_org_ref in funder_org_refs:
         print(f"Funder org ref: {funder_org_ref}")
-        recipient_datasets = []
         recipient_activities = get_activities(
             recipient_org_ref,
             f"/iati-activities/iati-activity[reporting-org/@ref='{recipient_org_ref}' and participating-org[@ref='{funder_org_ref}' and @role='1']]",
@@ -201,8 +206,9 @@ def match_command(recipient_org_ref, funder_org_ref, transaction_tolerance):
             update_xml=True,
             funder_org_ref=funder_org_ref,
         )
-        for dataset in recipient_datasets:
-            dataset.etree.write(f"out/{dataset.name}.xml")
+
+    for dataset in recipient_datasets.values():
+        dataset.etree.write(f"out/{dataset.name}.xml")
 
 
 if __name__ == "__main__":
